@@ -4,7 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Seeder;
-use App\Models\Models\Currency;
+use App\Models\Currency;
 
 class CurrencySeeder extends Seeder
 {
@@ -21,9 +21,9 @@ class CurrencySeeder extends Seeder
             Currency::truncate();
             
             $currencies = array(
-                ['type' => 'american_dollars', 'description' => 'Estos son Dólares americanos' ],
-                ['type' => 'ury_pesos', 'description' => 'Estos son Pesos uruguayos' ],
-                ['type' => 'euros', 'description' => 'Estos son Euros' ]
+                ['type' => 'USD', 'description' => 'Estos son Dólares americanos' ],
+                ['type' => 'UYU', 'description' => 'Estos son Pesos uruguayos' ],
+                ['type' => 'EUR', 'description' => 'Estos son Euros' ]
             );
 
             foreach($currencies as $user) {

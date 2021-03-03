@@ -15,7 +15,7 @@ class CreateCurrenciesTable extends Migration
     {
         Schema::create('currencies', function (Blueprint $table) {
             $table->increments('id');
-            $table->enum('type', ['ury_pesos','american_dollars','euros']);
+            $table->enum('type', ['USD','UYU','EUR']);
             $table->string('description');
             $table->timestamps();
         });

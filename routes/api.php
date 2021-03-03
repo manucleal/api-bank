@@ -14,10 +14,10 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:api')->get('/user', function (Request $request) {
-    return $request->user();
+Route::post('/login', [ App\Http\Controllers\UserController::class, 'login' ]);
+
+Route::group([ 'middleware' => 'auth:api' ], function () {
+    Route::get('/transactions', [ App\Http\Controllers\TransactionController::class, 'getTransactions' ]);
+    Route::post('/transfer', [ App\Http\Controllers\TransactionController::class, 'setTransfer' ]);
+    Route::post('/logout', [ App\Http\Controllers\UserController::class, 'logout' ]);
 });
-
-Route::get('/transactions', [App\Http\Controllers\UserController::class, 'index']);
-
-Route::post('/transfer', [App\Http\Controllers\UserController::class, 'index']);

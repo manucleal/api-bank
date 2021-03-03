@@ -4,7 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Seeder;
-use App\Models\Models\Account;
+use App\Models\Account;
 
 class AccountSeeder extends Seeder
 {

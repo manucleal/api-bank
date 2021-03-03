@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
-use App\Models\Models\User;
+use App\Models\User;
 
 class UserSeeder extends Seeder
 {
@@ -23,9 +23,9 @@ class UserSeeder extends Seeder
             User::truncate();
             
             $users = array(
-                ['name'=>'Emanuel', 'email' => 'emanuel@labs.com','password' => Hash::make('hola12') ],
+                ['name'=>'Emanuel', 'email' => 'emanuel@labs.com', 'password' => Hash::make('hola12') ],
                 ['name'=>'Fernanda', 'email' => 'fernanda@labs.com','password' => Hash::make('hola123') ],
-                ['name'=>'Belén', 'email' => 'belen@labs.com','password' => Hash::make('hola1234') ]
+                ['name'=>'Belén', 'email' => 'belen@labs.com', 'password' => Hash::make('hola1234') ]
             );
 
             foreach($users as $user) {
