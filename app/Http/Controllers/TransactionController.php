@@ -194,30 +194,50 @@ class TransactionController extends Controller
     public function getTransactions(Request $request) {
 
         $url_components = parse_url($request->fullUrl());
-        parse_str($url_components['query'], $params); 
+        $transaction = [];      
+        $dates = null;
+        $flagDates = false;
+        if(isset($url_components['query'])) {
+            parse_str($url_components['query'], $params);
+            
+            if(isset($params['from']) && !isset($params['to']) ) {
+                $dates = date($params['from']);
+                $flagDates = true;
+            } else if(!isset($params['from']) && isset($params['to'])) {
+                $dates = date($params['to']);
+                $flagDates = true;
+            }
 
-        if(date($params['from']) < date($params['to'])){
             $transaction = DB::table('transactions')->select();
-
-            if(isset($params['from'])) {
-                $dateTime = Carbon::createFromFormat('Y-m-d H', $params['from'].' 00')->toDateTimeString();
-                $transaction->where('date','>=', $dateTime);
+            
+            if(!$flagDates) {                                
+                if(isset($params['from'])) {
+                    $dateTime = Carbon::createFromFormat('Y-m-d H', $params['from'].' 00')->toDateTimeString();
+                    $transaction->where('date','>=', $dateTime);
+                }
+                if(isset($params['to'])) {
+                    $dateTime = Carbon::createFromFormat('Y-m-d H', $params['to'].' 23')->toDateTimeString();
+                    $transaction = $transaction->where('date','<=', $dateTime);
+                }
+            } else {                
+                $transaction = $transaction->whereRaw("date(date) = '".$dates."'");     
             }
-            if(isset($params['to'])) {
-                $dateTime = Carbon::createFromFormat('Y-m-d H', $params['to'].' 23')->toDateTimeString();
-                $transaction = $transaction->where('date','<=', $dateTime);
-            }
+            
             if(isset($params['sourceAccountID'])) {
-
                 if($this->validateAccountId($params['sourceAccountID'])) {
-                    $transaction = $transaction->where('account_id_from', $params['sourceAccountID']);    
+                    $transaction = $transaction->where('account_id_from', $params['sourceAccountID']);
                 } else {
-                    return response()->json(['error' => 'Unauthorized'], 401);
-                }                
+                    return response()->json([ 'error' => 'Forbidden', 'message' => 'Invalid sourceAccountID provided', 'statusCode' => 403], 403);
+                }
+            } else {                
+                $transaction = $transaction->where('account_id_from', $this->getUserAccountsIds());
             }
+            
+            $transaction = $transaction->get();
+            
+        } else if(!isset($params['from']) && !isset($params['to']) && !isset($params['sourceAccountID']) ) {
+            $transaction = DB::table('transactions')->select()->where('account_id_from', $this->getUserAccountsIds())->get();
         }
-
-        $transaction = $transaction->get();
 
         return response()->json(['data' => $transaction ], 200);
     }
@@ -263,7 +283,7 @@ class TransactionController extends Controller
 
         if($this->needExchangeMoney($accounts)) {
             //To do request API 
-            Storage::disk('local')->put('exchange.json', $this->dataExchange);
+            // Storage::disk('local')->put('exchange.json', $this->dataExchange);
             $fileContent = Storage::get('exchange.json');
             $exchanges = json_decode($fileContent);
             $exchangeEUR = ($transfer['amount'] / $exchanges->rates->{$accountFrom[0]->getCurrency()});
@@ -283,16 +303,16 @@ class TransactionController extends Controller
                                 'balance' => $accountTo[0]->getBalance() + $exchangeFinal 
                             ]);
                 if(!$responseSum) {
-                    return response()->json(['error' => 'Credit not working'], 401);
+                    return response()->json(['error' => 'Credit not working'], 400);
                 }
             } else {
-                return response()->json(['error' => 'Debit not working'], 401);
+                return response()->json(['error' => 'Debit not working'], 400);
             }
         } else {
-            return response()->json(['error' => 'Register transaction not working'], 401);
+            return response()->json(['error' => 'Transaction Register not working'], 400);
         }
 
-        return response()->json(['data' => $data ], 201);
+        return response()->json([ 'data' => $data, 'statusCode' => 201 ], 201);
     }
 
     private function needExchangeMoney(object $accounts) {
@@ -313,5 +333,15 @@ class TransactionController extends Controller
         }
 
         return $return;
+    }
+
+    private function getUserAccountsIds() {
+        $accountsIds = [];
+        $userAccounts = User::find(auth()->user()->id)->accounts->toArray();
+        foreach($userAccounts as $account) {
+            $accountsIds[] = $account['id'];
+        }
+
+        return $accountsIds;
     }
 }
