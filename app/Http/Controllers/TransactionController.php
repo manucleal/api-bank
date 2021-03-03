@@ -3,11 +3,12 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
-use App\Models\Account;
 use App\Models\User;
-use App\Models\Currency;
+use App\Models\Account;
 use App\Models\Transaction;
+use App\Models\Currency;
 use Carbon\Carbon;
 use Validator;
 
@@ -189,9 +190,36 @@ class TransactionController extends Controller
             "ZWL": 389.201873
         }
     }';
-    
+
     public function getTransactions(Request $request) {
 
+        $url_components = parse_url($request->fullUrl());
+        parse_str($url_components['query'], $params); 
+
+        if(date($params['from']) < date($params['to'])){
+            $transaction = DB::table('transactions')->select();
+
+            if(isset($params['from'])) {
+                $dateTime = Carbon::createFromFormat('Y-m-d H', $params['from'].' 00')->toDateTimeString();
+                $transaction->where('date','>=', $dateTime);
+            }
+            if(isset($params['to'])) {
+                $dateTime = Carbon::createFromFormat('Y-m-d H', $params['to'].' 23')->toDateTimeString();
+                $transaction = $transaction->where('date','<=', $dateTime);
+            }
+            if(isset($params['sourceAccountID'])) {
+
+                if($this->validateAccountId($params['sourceAccountID'])) {
+                    $transaction = $transaction->where('account_id_from', $params['sourceAccountID']);    
+                } else {
+                    return response()->json(['error' => 'Unauthorized'], 401);
+                }                
+            }
+        }
+
+        $transaction = $transaction->get();
+
+        return response()->json(['data' => $transaction ], 200);
     }
 
     public function setTransfer(Request $request) {
@@ -228,17 +256,13 @@ class TransactionController extends Controller
             'date' => Carbon::now(),
             'description' => $transfer['description']
         );
-
-        $userAccounts = User::find(auth()->user()->id)->accounts;
-        $account = $this->searchAccount($userAccounts, $transfer['accountTo']);
         
-        if(empty($account)){
+        if(empty($this->validateAccountId($transfer['accountTo']))){
             $data['tax'] = $transfer['amount'] * 0.01;
         }
 
-        if($this->needConversion($accounts)) {
-            //acomodar logica y sobreescribir este file solamente en determinado periodo de tiempo
-            //CALL API EXTERNA
+        if($this->needExchangeMoney($accounts)) {
+            //To do request API 
             Storage::disk('local')->put('exchange.json', $this->dataExchange);
             $fileContent = Storage::get('exchange.json');
             $exchanges = json_decode($fileContent);
@@ -268,10 +292,10 @@ class TransactionController extends Controller
             return response()->json(['error' => 'Register transaction not working'], 401);
         }
 
-        return response()->json([ 'data' => $data ], 201);
+        return response()->json(['data' => $data ], 201);
     }
 
-    private function needConversion(object $accounts) {
+    private function needExchangeMoney(object $accounts) {
         return ($accounts[0]['currency_id'] != $accounts[1]['currency_id']) ? true : false;
     }
 
@@ -279,5 +303,15 @@ class TransactionController extends Controller
         return $filtered = collect($collection)->filter(function ($item, $key) use ($arg) {           
             return $item->id == $arg;
         })->values()->all();
+    }
+
+    private function validateAccountId(string $id) {
+        $return = false;
+        $userAccounts = User::find(auth()->user()->id)->accounts;
+        if($userAccounts && !empty($this->searchAccount($userAccounts, $id))) {
+            $return = true;
+        }
+
+        return $return;
     }
 }
