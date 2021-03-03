@@ -195,8 +195,9 @@ class TransactionController extends Controller
 
         $url_components = parse_url($request->fullUrl());
         $transaction = [];      
-        $dates = null;
+        $dates = date("Y-m-d");
         $flagDates = false;
+
         if(isset($url_components['query'])) {
             parse_str($url_components['query'], $params);
             
@@ -239,11 +240,12 @@ class TransactionController extends Controller
             $transaction = DB::table('transactions')->select()->where('account_id_from', $this->getUserAccountsIds())->get();
         }
 
-        return response()->json(['data' => $transaction ], 200);
+        return response()->json(['data' => $transaction, 'statusCode' => 200 ], 200);
     }
 
     public function setTransfer(Request $request) {
         $transfer = $request->all();
+
     	$validator = Validator::make($transfer, [
             'accountFrom' => 'required|integer',
             'accountTo' => 'required|integer',
@@ -261,7 +263,7 @@ class TransactionController extends Controller
         
         //Check Accounts exists
         if(count($accounts) != 2) {
-            return response()->json(['error' => 'Bad request'], 401);
+            return response()->json(['error' => 'Bad request', 'statusCode' => 401 ], 401);
         }
 
         $accountFrom = $this->searchAccount($accounts, $transfer['accountFrom']);
@@ -303,13 +305,13 @@ class TransactionController extends Controller
                                 'balance' => $accountTo[0]->getBalance() + $exchangeFinal 
                             ]);
                 if(!$responseSum) {
-                    return response()->json(['error' => 'Credit not working'], 400);
+                    return response()->json([ 'error' => 'Credit not working', 'statusCode' => 400 ], 400);
                 }
             } else {
-                return response()->json(['error' => 'Debit not working'], 400);
+                return response()->json([ 'error' => 'Debit not working', 'statusCode' => 400 ], 400);
             }
         } else {
-            return response()->json(['error' => 'Transaction Register not working'], 400);
+            return response()->json([ 'error' => 'Transaction Register not working', 'statusCode' => 400 ], 400);
         }
 
         return response()->json([ 'data' => $data, 'statusCode' => 201 ], 201);
